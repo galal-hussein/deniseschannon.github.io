@@ -86,6 +86,59 @@ Depending on how the MySQL database is setup, you may need to do an [upgrade]({{
 
 If you were unable to see the **Admin** -> **Processes** tab due to the lack of memory, after starting Rancher server again with more memory, you should be able to see the tab and start troubleshooting the processes that have been running the longest.
 
+### Rancher server database is growing too quickly.
+
+As of v0.35.0+, Rancher server automatically cleans up a couple of database tables to prevent the database from increasing too quickly. If you are noticing that these tables are not being cleaned up quick enough for you, please feel free to update the default settings using our API. 
+
+By default, any records in the `events` table are deleted if they were created 2 weeks ago. The setting in the API is listed in seconds (`1209600`). The setting in the API is `events.purge.after.seconds`. 
+
+By default, any records in the `process_instance` table are deleted if they were created 1 day ago. The setting in the API is listed in seconds (`86400`). The setting in the API is `process_instance.purge.after.seconds`. 
+
+To update these settings in your API, navigate to the `http://<rancher-server-ip>:8080/v1/settings` page. Search for the setting you want to update and click on the link in the `links -> self` to navigate to the setting. Click on `Edit` on the side page to change the `value`. Remember, the value is in seconds. 
+
+
+<div id="databaselock">
+
+### Why is Rancher Server frozen? OR Why could my upgrade have failed?
+
+If you are starting Rancher and it freezes forever, there might be a liquibase database lock. On startup, liquibase does a schema migration. There is a race condition where it might leave a lock entry, which will prevent subsequent boots. 
+
+If you have just upgraded and in the Rancher server logs, there can be a log lock on the MySQL database that has not been released. 
+
+```bash
+....liquibase.exception.LockException: Could not acquire change log lock. Currently locked by <container_ID>
+```
+
+#### Releasing the database lock
+
+If you had created the data container for Rancher server per the [upgrading documentation]({{site.baseurl}}/rancher/upgrading/), you'll need to `exec` into the `rancher-data` container to update the  `DATABASECHANGELOGLOCK` table and remove the lock. If you hadn't created the data container, you can `exec` into the container that has your database.
+
+```bash
+$ sudo docker exec -it <container_id> mysql
+```
+
+Once you are in MySQL database, you'll need to access the `cattle` database.
+
+```bash
+mysql> use cattle;
+
+# Check that there is a lock in the table
+mysql> select * from DATABASECHANGELOGLOCK;
+
+# Update to remove the lock by the container
+mysql> update DATABASECHANGELOGLOCK set LOCKED="", LOCKGRANTED=null, LOCKEDBY=null where ID=1;
+
+
+# Check that the lock has been removed
+mysql> select * from DATABASECHANGELOGLOCK;
++----+--------+-------------+----------+
+| ID | LOCKED | LOCKGRANTED | LOCKEDBY |
++----+--------+-------------+----------+
+|  1 |        | NULL        | NULL     |
++----+--------+-------------+----------+
+1 row in set (0.00 sec)
+```
+
 ## Rancher Agent
 
 ### What are reasons why Rancher agent would fail to start? 
@@ -96,9 +149,9 @@ If you edited the `docker run .... rancher/agent...` command from the UI to add 
 
 #### Using a cloned VM 
 
-IF you cloned a VM and attempting to register the cloned VM, it will not work and throw an error in the rancher-agent logs. `ERROR: Please re-register this agent.` The unique ID that rancher saves in `/var/lib/rancher/state` will be the same for cloned VMs and unable to re-register. 
+If you cloned a VM and attempting to register the cloned VM, it will not work and throw an error in the rancher-agent logs. `ERROR: Please re-register this agent.` The unique ID that rancher saves in `/var/lib/rancher/state` will be the same for cloned VMs and unable to re-register. 
 
-The workaround is to `rm -rf /var/lib/rancher/state; docker rm -fv rancher-agent; docker rm-fv rancher-agent-state` and register again.
+The workaround for this is to run the following command on the cloned VM `rm -rf /var/lib/rancher/state; docker rm -fv rancher-agent; docker rm -fv rancher-agent-state`, once completed you can register the server again.
 
 <a id="agent-logs"></a>
 
@@ -133,6 +186,10 @@ curl -i <Host Registration URL you set in UI>/v1
 You should get a json response. If authentication is turned on, the response code should be 401. If authentication is not turned on, the response code should be 200. 
 
 > **Note:** Both normal HTTP connections and websocket connections (ws://) are used. If this URL points to a proxy or load balancer, make sure it is configured to handle websocket connections.
+
+### What do I do if the IP of my host has changed (due to reboot)? 
+
+If your host has a new IP after a reboot, the IP of your host in Rancher will no longer match. Your containers will no longer have access to the managed network. To get the host and all containers back into the managed network, just re-run the command to [add in a custom host]({{site.baseurl}}/rancher/rancher-ui/infrastructure/hosts/custom/). Do not stop or remove the existing agent on the host!
 
 ## Cross Host Communication
 
@@ -189,6 +246,14 @@ The first rule is an example of a rule for a user-defined container in which the
 
 If it seems that you are missing rules, try deploying another container from the Rancher UI and specify a port mapping. When the container is deployed, all rules will be synced up with the Rancher database. This obviously is not a permanent fix to the problem, but is useful for debugging and short-term fixes.
 
+### Running Ubuntu, and containers are unable to communicate with each other.
+
+If you have `UFW` enabled, you can either disable `UFW` OR change `/etc/default/ufw` to:
+
+```
+DEFAULT_FORWARD_POLICY="ACCEPT"
+```
+
 ## Network Agents
 
 <a id="dns-config"></a>
@@ -200,6 +265,16 @@ If you want to see the configuration of the Rancher DNS setup, you will need to 
 ```bash
 $ cat /var/lib/cattle/etc/cattle/dns/answers.json
 ```
+
+## Networking
+
+### CentOS
+
+#### Why are my containers unable to connect to network?
+
+If you run a container on the host (i.e. `docker run -it ubuntu`) and the container cannot talk to the internet or anything outside the host, then you might have hit a networking issue. 
+
+CentOS will by default set `/proc/sys/net/ipv4/ip_forward` to `0`, which will essentially bork all networking for Docker.  Docker sets this value to `1` but if you run `service restart networking` on CentOS it sets it back to `0`.
 
 <a id="lb-config"></a>
 
@@ -214,45 +289,6 @@ $ cat /etc/haproxy/haproxy.cfg
 ```
 
 This file will provide all the configuration details of the load balancer. 
-
-
-## Upgrading
-
-### Why didn't my upgrade succeed?
-
-If in the Rancher server logs, there may be a log lock on the MySQL database that has not been released. 
-
-```bash
-....liquibase.exception.LockException: Could not acquire change log lock. Currently locked by <container_ID>
-```
-
-If you had created the data container for Rancher server per the [upgrading documentation]({{site.baseurl}}/rancher/upgrading/), you'll need to `exec` into the `rancher-data` container to update the  `DATABASECHANGELOGLOCK` table and remove the lock. If you hadn't created the data container, you can `exec` into the container that has your database.
-
-```bash
-$ sudo docker exec -it <container_id> mysql
-```
-
-Once you are in MySQL database, you'll need to access the `cattle` database.
-
-```bash
-mysql> use cattle;
-
-# Check that there is a lock in the table
-mysql> select * from DATABASECHANGELOGLOCK;
-
-# Update to remove the lock by the container
-mysql> update DATABASECHANGELOGLOCK set LOCKED="", LOCKGRANTED=null, LOCKEDBY=null where ID=1;
-
-
-# Check that the lock has been removed
-mysql> select * from DATABASECHANGELOGLOCK;
-+----+--------+-------------+----------+
-| ID | LOCKED | LOCKGRANTED | LOCKEDBY |
-+----+--------+-------------+----------+
-|  1 |        | NULL        | NULL     |
-+----+--------+-------------+----------+
-1 row in set (0.00 sec)
-```
 
 ## Authentication
 

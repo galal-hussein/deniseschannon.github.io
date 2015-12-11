@@ -20,7 +20,11 @@ A load balancer can be scheduled like any other service. Read more about [schedu
 
 Rancher supports L4 load balancing by adding ports and linking target services. Any traffic directed to any of source port(s) will be sent to the private port(s) of the linked service(s).
 
+> **Note:**  Port `42` cannot be used as a source port for load balancers because it's internally used for [health checks]({{site.baseurl}}/rancher/concepts/health-checks). 
+
 When working with services that contains [sidekicks]({{site.baseurl}}/rancher/rancher-compose/#sidekicks), you need to link the [primary service]({{site.baseurl}}/rancher/rancher-compose/#primary-service), which is the service that contains the `sidekick` label. 
+
+> **Note:** Load balancers will only work for services that are using the managed network. If you select any other network choice for your target services, it will **not** work with the load balancer.
 
 ### Load Balancer Example (L4)
 
@@ -250,6 +254,8 @@ web2:
 Rancher implements a distributed health monitoring system by running an HAProxy instance on every host for the sole purpose of providing health checks to containers.  When health checks are enabled either on an individual container or a service,  each container is then monitored by up to three HAProxy instances running on different hosts. The container is considered healthy if at least one HAProxy instance reports a "passed" health check.
 
 Rancher’s approach handles network partitions and is more efficient than client-based health checks. By using HAProxy to perform health checks, Rancher enables users to specify the same health check policy for DNS service and for load balancers.
+
+> **Note:** Health checks will only work for services that are using the managed network. If you select any other network choice, it will **not** be monitored.
 
 To enable health checks for services, we add the health check in the `rancher-compose.yml` file.
 

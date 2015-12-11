@@ -91,6 +91,26 @@ labels:
   io.rancher.scheduler.affinity:host_label_soft_ne: key4=value4
 ```
 
+**Automatically Applied Host Labels**
+
+In v0.46.0+, Rancher automatically creates host labels related to linux kernel version and Docker Engine version of the host.
+
+Key | Value | Description
+----|----|----
+`io.rancher.host.linux_kernel_version` | Linux Kernel Version on Host (e.g, `3.19`) |  Version of the Linux kernel running on the host
+`io.rancher.host.docker_version` | Docker Engine Version on the host (e.g. `1.9.1`) | Docker Engine Version on the host
+<br>
+
+```yaml
+labels:
+# Host MUST be running Docker version 1.9.1
+io.rancher.scheduler.affinity:host_label: io.rancher.host.docker_version=1.9.1
+# Host MUST not be running Docker version 1.6
+io.rancher.scheduler.affinity:host_label_ne: io.rancher.host.docker_version=1.6 
+```
+
+> **Note:** Rancher does not support the concept of scheduling containers on a host that has `>=` a specific version. You can create specific whitelists and blacklists by using the host scheduling rules to determine if a specific versin of Docker Engine is required for your services.
+
 #### Finding Hosts with Container Labels
 
 When adding containers or services to Rancher, you can add container labels. These labels can be used for the field that you want a rule to compare against. Reminder: This cannot be used if you set global service to true.
@@ -117,12 +137,14 @@ When `rancher-compose` starts containers for a service, it also automatically cr
 
 Label | Value
 ----|-----
-io.rancher.stack.name | `${stack_name}`
-io.rancher.stack_service.name | `${stack_name}/${service_name}`
+io.rancher.stack.name | `$${stack_name}`
+io.rancher.stack_service.name | `$${stack_name}/$${service_name}`
 
-Note: When using the `io.rancher.stack_service.name`, the value must be in the format of `stack name/service name.
+> **Note:** When using the `io.rancher.stack_service.name`, the value must be in the format of `stack name/service name.
 
-The macros `${stack_name}` and `${service_name}` can also be used in the `docker-compose.yml` file and will be evaluated when the service is started.
+The macros `$${stack_name}` and `$${service_name}` can also be used in the `docker-compose.yml` file and will be evaluated when the service is started. 
+
+Please note that in versions prior to Rancher v0.41.0 and Rancher-compose v0.4.1, the values had a single `$`, but with the addition of [environment interpolation]({{site.baseurl}}rancher/rancher-compose/environment-interpolation/), the values require a double `$$`.
 
 Example of Service Name:
 
@@ -156,14 +178,14 @@ A typical scheduling policy may be to try to spread the containers of a service 
 
 ```yaml
 labels: 
-  io.rancher.scheduler.affinity:container_label_ne: io.rancher.stack_service.name=${stack_name}/${service_name}
+  io.rancher.scheduler.affinity:container_label_ne: io.rancher.stack_service.name=$${stack_name}/$${service_name}
 ```
 
 Since this is a hard anti-affinity rule, we may run into problems if the scale is larger than the number of hosts available.  In this case, we might want to use a soft anti-affinity rule so that the scheduler is still allowed to deploy a container to a host that already has that container running.  Basically, this is a soft rule so it can be ignored if no better alternative exists.
 
 ```yaml
 labels: 
-  io.rancher.scheduler.affinity:container_label_soft_ne: io.rancher.stack_service.name=${stack_name}/${service_name}
+  io.rancher.scheduler.affinity:container_label_soft_ne: io.rancher.stack_service.name=$${stack_name}/$${service_name}
 ```
 
 #### Example 2:
@@ -172,7 +194,7 @@ Another example may be to deploy all the containers on the same host regardless 
 
 ```yaml
 labels: 
-  io.rancher.scheduler.affinity:container_label_soft: io.rancher.stack_service.name=${stack_name}/${service_name}
+  io.rancher.scheduler.affinity:container_label_soft: io.rancher.stack_service.name=$${stack_name}/$${service_name}
 ```
 
 If a hard affinity rule to itself was chosen instead, the deployment of the first container would fail since there would be no host that currently has that service running.

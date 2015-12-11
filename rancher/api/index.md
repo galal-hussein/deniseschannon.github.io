@@ -1,435 +1,97 @@
 ---
-title: API
+title: API Common Resource Fields
 layout: rancher-default
 ---
 
-## Resource Types
+## Experimenting with the API
 
-<br>
+The API has its own user interface accessible from a web browser.  This is an easy way to see resources, perform actions, and see the equivalent cURL or HTTP request & response.  To access it, click on "API & Keys" in the User menu
 
-[account]({{site.baseurl}}/rancher/api/account/)|
----|
-All resources in Rancher are owned or created by an account. |
+![User menu]({{site.baseurl}}/img/rancher/apikeys.png)
 
-<br><br>
-<br>
+Then click on the endpoint link:
 
-[addOutputsInput]({{site.baseurl}}/rancher/api/addOutputsInput/)|
----|
- |
+![Endpoint link]({{site.baseurl}}/img/rancher/api_endpoint.png)
 
-<br><br>
-<br>
+## Terminology
 
-[apiKey]({{site.baseurl}}/rancher/api/apiKey/)|
----|
-An API Key provides access to the Rancher API if access control has been turned on. The access key and secret key pair are created per environment and can be used to directly call the API or used with [rancher-compose]({{site.baseurl}}/rancher/rancher-compose). |
+Some of the resource type names used in the API do not match the current terminology used in the UI.  In particular:
 
-<br><br>
-<br>
+| UI | API | Description |
+|----|-----|-------------|
+| [Environment]({{site.baseurl}}/rancher/configuration/environments/) | [project]({{site.baseurl}}/rancher/api/api-resources/project) | A group of physical resources, such as [hosts]({{site.baseurl}}/rancher/api/api-resources/host)) |
+| [Stack]({{site.baseurl}}/rancher/rancher-ui/applications/stacks/) | [environment]({{site.baseurl}}/rancher/api/api-resources/environment) | An (API) environment is a group of services and the level at which rancher-compose operates. |
 
-[certificate]({{site.baseurl}}/rancher/api/certificate/)|
----|
-A certificate is used to add in SSL termination to load balancers. |
+In the documentation, we have used the UI term in descriptions and have provided additional disclaimers on the differences.  This confusion will be cleared up in a future `/v2` of the API.
 
-<br><br>
-<br>
+## Authentication
 
-[cluster]({{site.baseurl}}/rancher/api/cluster/)|
----|
-Collection Test Description |
+API requests must include authentication information if [Access Control]({{site.baseurl}}/rancher/configuration/access-control/) is enabled.  Authentication is done with HTTP basic authentication using [API Keys]({{site.baseurl}}/rancher/api/api-resources/apikey).  API keys can either belong to a single (UI) Environment / (API) [Project]({{site.baseurl}}/rancher/api/api-resources/project}) with access to just that Environment, or to a [Account]({{site.baseurl}}/rancher/api/api-resources/account) with access to all Environments the account belongs to, and the ability to create new ones.  There is also a separate JSON Web Token interface primarily for the UI.
 
-<br><br>
-<br>
+### API keys for an Environment
 
-[container]({{site.baseurl}}/rancher/api/container/)|
----|
-A container is a representation of a Docker container on a host. |
+Environment API keys can be created in the UI, see [API & Keys]({{site.baseurl}}rancher/configuration/api-keys/).  The key is owned by the Environment and has full access to manage that Environment, but no access to any others.  [Membership roles]({{site.baseurl}}/rancher/configuration/environments/#membership-roles) do not apply to these keys.
 
-<br><br>
-<br>
+### API keys for an Account
 
-[containerEvent]({{site.baseurl}}/rancher/api/containerEvent/)|
----|
-Collection Test Description |
+Account API keys are not currently exposed in the UI.  You can create one by clicking into the API in a browser:
+  - Click on the Endpoint link in the UI
+  - Navigate to `/v1/apikeys`
+  - Click `Create`
+  - Choose the appropriate `accountId` that you want to create a key for
+  - Optionally set a `name` and `description`
+  - Click `Show Request`, then `Send Request`
+  - Save the `publicValue` and `secretValue` in the response
 
-<br><br>
-<br>
+Account keys can create new Environments,  and have can be used to access multiple Environments via `/v1/projects/`.  [Membership roles]({{site.baseurl}}/rancher/configuration/environments/#membership-roles) apply to these keys and restrict what Environments the account can see and what actions they can take.
 
-[containerExec]({{site.baseurl}}/rancher/api/containerExec/)|
----|
-Collection Test Description |
+## Scoping
 
-<br><br>
-<br>
+- Most resources are owned by an environment and accessible under `/v1/projects/<project_id>/<resource>`
+- Since Environment credentials only ever have access to one Environment (project), you can optionally skip the `/project/<project_id>` part.
+- For example, if you are working with project `1a5` using an Environment API key, /v1/projects/1a5` is the same as `/v1` and /v1/projects/1a5/hosts` is the same as `/v1/hosts`.
+- The documentation will generally refer to the shorter `/v1/<type>` version.  If using an Account key, add in the path for the approprate environment.
 
-[credential]({{site.baseurl}}/rancher/api/credential/)|
----|
-Collection Test Description |
+## Making requests
 
-<br><br>
-<br>
+The API is generally RESTful but has several features to make the definition of everything discoverable by a client so that generic clients can be written instead of having to write specific code for every type of resource.  For painfully detailed info about the generic API spec, [see here](https://github.com/rancher/api-spec/blob/master/specification.md).
 
-[dnsService]({{site.baseurl}}/rancher/api/dnsService/)|
----|
-A "dnsService" in the API is referred to as a Service Alias in the UI and the Rancher documentation. In the API documentation, we'll use the UI terminology. A service alias allows the ability to add a DNS record for your services to be discovered. |
+- Every type has a [Schema]({{site.baseurl}}/rancher/api/api-resources/schema/) which describes:
+  - The URL to get to the collection of this type of resources
+  - Every field the resource can have, along with their type, basic validation rules, whether they are required or optional, etc.
+  - Every action that is possible on this type of resouce, with their inputs and outputs (also as schemas).
+  - Every field that filtering is allowed on
+  - What HTTP verb methods are available for the collection itself, or for individual resources in the collection.
 
-<br><br>
-<br>
 
-[dockerBuild]({{site.baseurl}}/rancher/api/dockerBuild/)|
----|
-Collection Test Description |
+- So the theory is that you can load just the list of schemas and know everything about the API.  This is in fact how the UI for the API works, it contains no code specific to Rancher itself.  The URL to get Schemas is sent in every HTTP response as a `X-Api-Schemas` header.  From there you can follow the `collection` link on each schema to know where to list resources, and other `links` inside of the returned resources to get any other information.
 
-<br><br>
-<br>
 
-[environment]({{site.baseurl}}/rancher/api/environment/)|
----|
-An "environment" in the API is referred to as a stack in the UI and the Rancher documentation. In the API documentation, we'll use the UI terminology. A Rancher stack mirrors the same concept as a docker-compose project.  It represents a group of services that make up a typical application or workload. |
+- In practice, you will probably just want to construct URL strings.  We highly suggest limiting this to the top-level to list a collection (`/v1/<type>`) or get a specific resource (`/v1/<type>/<id>`).  Anything deeper than that is subject to change in future releases.
 
-<br><br>
-<br>
+- Resources have relationships between each other called links.  Each resource includes a map of `links` with the name of the link and the URL to retrieve that information.  Again you should `GET` the resource and then follow the URL in the `links` map, not construct these strings yourself.
 
-[environmentUpgrade]({{site.baseurl}}/rancher/api/environmentUpgrade/)|
----|
-Collection Test Description |
+- Most resources have actions, which do something or change the state of the resource.  To use these, send a HTTP `POST` to the URL in the `actions` map for the action you want.  Some actions require input or produce output, see the individual documentation for each type or the schemas for specific information.
 
-<br><br>
-<br>
+- To edit a resource, send a HTTP `PUT` to the `links.self` link on the resource with the fields that you want to change.  Unknown fields and ones that are not editable are ignored.
 
-[externalDnsEvent]({{site.baseurl}}/rancher/api/externalDnsEvent/)|
----|
-Collection Test Description |
+- To delete a resource, send a HTTP `DELETE` to the `links.self` link on the resource.  Note that some resources may need to be deactivated before they can be deleted, and deleted resources can still be retrieved from the API if you ask specifically for them by ID.
 
-<br><br>
-<br>
+- To create a new resource, HTTP `POST` to the collection URL in the schema (which is `/v1/<type>`).
 
-[externalEvent]({{site.baseurl}}/rancher/api/externalEvent/)|
----|
-Collection Test Description |
+## Filtering
+Most collections can be filtered on the server-side by common fields using HTTP query parameters.  The `filters` map shows you what fields can be filtered on and what the filtered values were for the request you made.  The API UI has controls to setup filtering and show you the appropriate request.  For simple "equals" matches it's just `field=value`.  Modifiers can be added to the field name, e.g. `field_gt=42` for "field is greater than 42".  See the [API spec](https://github.com/rancher/api-spec/blob/master/specification.md#filtering) for full details.
 
-<br><br>
-<br>
+## Sorting
+Most collections can be sorted on the server-side by common fields busing HTTP query parameters.  The `sortLinks` map shows you what sorts are available, along with the URL to get the collection sorted by that.  It also includes info about what the current response was sorted by, if specified.
 
-[externalHostEvent]({{site.baseurl}}/rancher/api/externalHostEvent/)|
----|
- |
+## Pagination
+API responses are paginated with a limit of 100 resources per page by default.  This can be increased to upto 1000 with the `limit=1000` query parameter.  The `pagination` map in collection responses tells you whether or not you have the full result set and has a link to the next page if you do not.
 
-<br><br>
-<br>
-
-[externalService]({{site.baseurl}}/rancher/api/externalService/)|
----|
-An external service allows the ability to add any IP or hostname as a service to be discovered as a service. |
-
-<br><br>
-<br>
-
-[externalServiceEvent]({{site.baseurl}}/rancher/api/externalServiceEvent/)|
----|
- |
-
-<br><br>
-<br>
-
-[externalStoragePoolEvent]({{site.baseurl}}/rancher/api/externalStoragePoolEvent/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[externalVolumeEvent]({{site.baseurl}}/rancher/api/externalVolumeEvent/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[globalLoadBalancer]({{site.baseurl}}/rancher/api/globalLoadBalancer/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[host]({{site.baseurl}}/rancher/api/host/)|
----|
-Hosts are the most basic unit of resource within Rancher and is represented as any Linux server, virtual or physical, with the following minimum requirements. <br> <br> * Any modern Linux distribution that supports Docker 1.6+. <br> * Must be able to communicate with the Rancher server via http or https through the pre-configured port (Default is 8080). <br> * Must be routable to any other hosts belonging to the same environment to leverage Rancher's cross-host networking for Docker containers.<br> <br> Rancher also supports Docker Machine and allows you to add your host via any of its supported drivers. |
-
-<br><br>
-<br>
-
-[hostAccess]({{site.baseurl}}/rancher/api/hostAccess/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[identity]({{site.baseurl}}/rancher/api/identity/)|
----|
-An identity is Rancher's representation of an object(i.e. `ldap_group`, `github_user`) when Rancher has turned on [access control]({{site.baseurl}}/rancher/configuration/access-control/). The `externalId` in an identity is the unique identifier in the authentication system that represents the object. The role of an identity is always null unless it is being returned as the identity of a [projectMember]({{site.baseurl}}/rancher/api/projectMember/). |
-
-<br><br>
-<br>
-
-[image]({{site.baseurl}}/rancher/api/image/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[instance]({{site.baseurl}}/rancher/api/instance/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[instanceLink]({{site.baseurl}}/rancher/api/instanceLink/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[ipAddress]({{site.baseurl}}/rancher/api/ipAddress/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[label]({{site.baseurl}}/rancher/api/label/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[loadBalancer]({{site.baseurl}}/rancher/api/loadBalancer/)|
----|
- |
-
-<br><br>
-<br>
-
-[loadBalancerConfig]({{site.baseurl}}/rancher/api/loadBalancerConfig/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[loadBalancerConfigListenerMap]({{site.baseurl}}/rancher/api/loadBalancerConfigListenerMap/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[loadBalancerHostMap]({{site.baseurl}}/rancher/api/loadBalancerHostMap/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[loadBalancerListener]({{site.baseurl}}/rancher/api/loadBalancerListener/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[loadBalancerService]({{site.baseurl}}/rancher/api/loadBalancerService/)|
----|
-Rancher implements a managed load balancer using HAProxy that can be manually scaled to multiple hosts.  A load balancer can be used to distribute network and application traffic to individual containers by directly adding them or "linked" to a basic service.  A basic service that is "linked" will have all its underlying containers automatically registered as load balancer targets by Rancher. |
-
-<br><br>
-<br>
-
-[loadBalancerTarget]({{site.baseurl}}/rancher/api/loadBalancerTarget/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[machine]({{site.baseurl}}/rancher/api/machine/)|
----|
-Machines are created whenever Rancher uses `docker-machine` to create hosts in Rancher. Adding any type of host through the UI that is not the custom command option is calling `docker-machine` and a machine entry will be created as well as a [host]({{site.baseurl}}/rancher/api/host). |
-
-<br><br>
-<br>
-
-[mount]({{site.baseurl}}/rancher/api/mount/)|
----|
-A mount is the relationship of a volume and the directory location inside the container. |
-
-<br><br>
-<br>
-
-[network]({{site.baseurl}}/rancher/api/network/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[password]({{site.baseurl}}/rancher/api/password/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[physicalHost]({{site.baseurl}}/rancher/api/physicalHost/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[port]({{site.baseurl}}/rancher/api/port/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[project]({{site.baseurl}}/rancher/api/project/)|
----|
-A "project" in the API is referred to as an environment in the UI and Rancher documentation. In the API documentation, we'll use the UI terminology.  All hosts and any Rancher resources (i.e. containers, load balancers, etc.) are created and belong to an [environment]({{site.baseurl}}/rancher/configuration/environments/).  Access control to who can view and manage these resources are then defined by the owner of the environment.  Rancher currently supports the capability for each user to manage and invite other users to their environment and allows for the ability to create multiple environments for different workloads.  For example, you may want to create a "dev" environment and a separate "production" environment with its own set of resources and limited user access for your application deployment. |
-
-<br><br>
-<br>
-
-[projectMember]({{site.baseurl}}/rancher/api/projectMember/)|
----|
-A "project member" in the API is referred to as an environment members in the UI and Rancher documentation. An environment member is a list of all of the members of the  environment. An environment member is an [identity]({{site.baseurl}}/rancher/api/identity). |
-
-<br><br>
-<br>
-
-[pullTask]({{site.baseurl}}/rancher/api/pullTask/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[register]({{site.baseurl}}/rancher/api/register/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[registrationToken]({{site.baseurl}}/rancher/api/registrationToken/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[registry]({{site.baseurl}}/rancher/api/registry/)|
----|
-A registry is where image repositories are hosted. The repository can be either from DockerHub, Quay.io, or a custom private registry. |
-
-<br><br>
-<br>
-
-[registryCredential]({{site.baseurl}}/rancher/api/registryCredential/)|
----|
-A registry credential is used to authenticate against a [registry]({{site.baseurl}}/rancher/api/registry). |
-
-<br><br>
-<br>
-
-[schema]({{site.baseurl}}/rancher/api/schema/)|
----|
-This is the schema resource |
-
-<br><br>
-<br>
-
-[service]({{site.baseurl}}/rancher/api/service/)|
----|
-Rancher adopts the standard Docker Compose terminology for services and defines a basic service as one or more containers created from the same Docker image.  Once a service (consumer) is linked to another service (producer) within the same stack, a DNS record mapped to each container instance is automatically created and discoverable by containers from the "consuming" service. Other benefits of creating a service under Rancher include":" <br><br> * Service HA - the ability to have Rancher automatically monitor container states and maintain a service's desired scale. <br> * Health Monitoring - the ability to set basic monitoring thresholds for container health. |
-
-<br><br>
-<br>
-
-[serviceConsumeMap]({{site.baseurl}}/rancher/api/serviceConsumeMap/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[serviceEvent]({{site.baseurl}}/rancher/api/serviceEvent/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[serviceExposeMap]({{site.baseurl}}/rancher/api/serviceExposeMap/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[setting]({{site.baseurl}}/rancher/api/setting/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[snapshot]({{site.baseurl}}/rancher/api/snapshot/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[statsAccess]({{site.baseurl}}/rancher/api/statsAccess/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[storagePool]({{site.baseurl}}/rancher/api/storagePool/)|
----|
-A storage pool is a list of hosts that can participate in shared storage. |
-
-<br><br>
-<br>
-
-[subscribe]({{site.baseurl}}/rancher/api/subscribe/)|
----|
- |
-
-<br><br>
-<br>
-
-[typeDocumentation]({{site.baseurl}}/rancher/api/typeDocumentation/)|
----|
-Collection Test Description |
-
-<br><br>
-<br>
-
-[volume]({{site.baseurl}}/rancher/api/volume/)|
----|
-A volume can be associated to containers or storage pools. <br><br> * A container can have many volumes and containers are mapped to volumes the [mount]({{site.baseurl}}/rancher/api/mount/) link on a container. <br> * A storage pool owns many volues. The volume is only available to containers deployed on hostst that are part of the storage pool. When a volume is being created, you do not directly associate it to a storage pool. You will only need to specify a driver and during allocation, Rancher will resolve it to a storage pool. |
-
-<br><br>
-
+## WebSockets
+Several Rancher features such as container logs, shell access, and statistics use WebSockets to stream information.  To use these from the API:
+  - Follow the appropriate link or execute the appropriate action
+  - The response will include a URL (starting with `ws://` or `wss://`) and a long `token` string.
+  - Open a WebSocket client pointed at the URL returned.
+  - The token is signed by the Rancher server and allows the host the container is on to authorize the request, so it must be sent to the server as a HTTP header, `Authorization: Bearer <token_string>`.
+  - If you are making a request from a web browser you won't be able to send arbitrary HTTP headers, so you can optionally add it as a `token=<token_string>` query parameter on the URL instead.

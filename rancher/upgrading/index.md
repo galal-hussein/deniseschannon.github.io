@@ -33,7 +33,7 @@ If you have launched Rancher server **without** using an [external DB]({{site.ba
     $ docker pull rancher/server:latest
     ```
 
-4. Launch a new Rancher Server container using the database from the `rancher-data` container. Any changes in Rancher will be saved in the `rancher-data` container. If you are having issues with your upgrade, please refer to our [troubleshooting section]({{site.baseurl}}/rancher/faqs/troubleshooting/#upgrading).
+4. Launch a new Rancher Server container using the database from the `rancher-data` container. Any changes in Rancher will be saved in the `rancher-data` container. If you are having issues with your upgrade, please refer to our [troubleshooting section]({{site.baseurl}}/rancher/faqs/troubleshooting/#databaselock).
 
     ```bash
     $ docker run -d --volumes-from rancher-data --restart=always -p 8080:8080 rancher/server:latest
@@ -57,14 +57,26 @@ If you have launched Rancher server **without** using an [external DB]({{site.ba
     $ docker cp <container_name_of_original_server>:/var/lib/mysql <path on host>
     ```
 
-3. Start new server container. 
+3. Now set the UID/GID for the folder so that the mysql user within the container has the correct ownership of the mysql mount.
+
+    ```bash
+    $ sudo chown -R 102:105 <path on host>
+    ```
+
+4. Start new server container.
 
     ```bash
     docker run -d -v <path_on_host>:/var/lib/mysql -p 8080:8080 --restart=always rancher/server:latest
     ```
-   
+
     > **Note**: It is important that you have trailing '/' at the end of the host path if you have copied a database out of a previous container. Otherwise, the directory ends up in the wrong place.
 
 ### Rancher Agents 
 
 Each Rancher agent version is pinned to a Rancher server version. If you upgrade Rancher server and Rancher agents require an upgrade, it will automatically upgrade the agents.
+
+> **Note:** At present this covers the upgrade path for the rancher agent, not however for the 'agent-instance' containers. For now these must be manually upgraded.
+
+In order to upgrade the version of the network agent, you'd need to manually stop the network agent and remove. Anything that triggers networking on the host that has the network agent will cause a new network agent (with the latest verison) to be started.
+
+In order to upgrade the version of your load balancers, you'll need to re-create them to get the newest version of rancher/agent-instance. One way is to clone them so that you'll get all your targets.
