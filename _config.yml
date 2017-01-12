@@ -2,17 +2,17 @@ name: Rancher Documentation
 description: Documentation for Rancher
 
 
-URL: http://deniseschannon.github.io
-baseurl: "http://deniseschannon.github.io"
+URL: http://rancher.github.io
+baseurl: ""
 
-markdown: redcarpet
+exclude: []
 
-redcarpet:
-  extensions: ["smart", "tables", "no_intra_emphasis", "autolink", "strikethrough", "superscript", "with_toc_data"]
-  syntax_highlighter: rouge
-
-kramdown: 
-  syntax_highlighter: rouge
+markdown: kramdown
+highlighter: rouge
+kramdown:
   input: GFM
+  syntax_highlighter: rouge
 permalink: pretty
 
+gems:
+  - jekyll-redirect-from

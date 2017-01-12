@@ -1,9 +1,37 @@
 ---
-title: Booting RancherOS with PXE
+title: Booting RancherOS with iPXE
 layout: os-default
 
 ---
-## Booting RancherOS via PXE
+## Booting RancherOS via iPXE
 ----
 
-Currently, we don't support PXE with RancherOS, as we recommend using [iPXE]({{site.baseurl}}/os/running-rancheros/server/ipxe). If enough users request PXE, we can look to adding support for it.
+```
+#!ipxe
+# Boot a persistent RancherOS to RAM
+
+# Location of Kernel/Initrd images
+set base-url http://releases.rancher.com/os/latest
+
+kernel ${base-url}/vmlinuz rancher.state.dev=LABEL=RANCHER_STATE rancher.state.autoformat=[/dev/sda] rancher.cloud_init.datasources=[url:http://example.com/cloud-config]
+initrd ${base-url}/initrd
+boot
+```
+
+### Datasources 
+
+Valid [datasources](https://github.com/rancher/os/blob/3338c4ac63597940bcde7e6005f1cc09287062a2/cmd/cloudinit/cloudinit.go#L378) for RancherOS.
+
+| type | default |  
+|---|---|
+| ec2 | DefaultAddress | 
+| file | path |
+| url | url |
+| cmdline |  |
+| configdrive |  |
+| digitalocean | DefaultAddress |
+| gce |  |
+
+### Cloud-Config
+ 
+When booting via iPXE, RancherOS can be configured using a [cloud-config file]({{site.baseurl}}/os/configuration/#cloud-config).

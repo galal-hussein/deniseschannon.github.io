@@ -1,7 +1,9 @@
 ---
 title: Rancher Documentation
 layout: rancher-default
-
+redirect_from:
+  - /rancher/
+  - /
 ---
 
 ## Overview of Rancher
@@ -15,7 +17,7 @@ Rancher takes in raw computing resources from any public or private cloud in the
 
 ### Key Features
 
-Key product features of Rancher include: 
+Key product features of Rancher include:
 
 1. Cross-host networking. Rancher creates a private software defined network for each environment, allowing secure communication between containers across hosts and clouds.
 
@@ -25,7 +27,7 @@ Key product features of Rancher include:
 
 4.	Service discovery: Rancher implements a distributed DNS-based service discovery function with integrated health checking that allows containers to automatically register themselves as services, as well as services to dynamically discover each other over the network.
 
-5.	Service upgrades: Rancher makes it easy for users to upgrade existing container services, by allowing service cloning and redirection of service requests.  This makes it possible to ensure services can be validated against their dependencies before live traffic is directed to the newly upgraded services. 
+5.	Service upgrades: Rancher makes it easy for users to upgrade existing container services, by allowing service cloning and redirection of service requests.  This makes it possible to ensure services can be validated against their dependencies before live traffic is directed to the newly upgraded services.
 
 6.	Resource management: Rancher supports Docker Machine, a powerful tool for provisioning hosts directly from cloud providers. Rancher then monitors host resources and manages container deployment.
 
@@ -68,7 +70,7 @@ In this guide, we will create a simple Rancher install, which is a single host i
 
 Provision a Linux host with 64-bit Ubuntu 14.04, which must have a kernel of 3.10+. You can use your laptop, a virtual machine, or a physical server. Please make sure the Linux host has at least **1GB** memory.
 
-To install Docker on the server, follow these instructions, which are simplified from the [Docker](https://docs.docker.com/installation/ubuntulinux/) documentation. 
+To install Docker on the server, follow these instructions, which are simplified from the [Docker](https://docs.docker.com/installation/ubuntulinux/) documentation.
 
 ```bash
 #Get the latest Docker package
@@ -95,7 +97,7 @@ Our UI is exposed on port `8080`, so in order to view the UI, go to http://serve
 
 ### Add Hosts
 
-For simplicity, we will add the same host running the Rancher server as a host in Rancher. In real production deployments, we recommend having dedicated hosts running Rancher server(s). 
+For simplicity, we will add the same host running the Rancher server as a host in Rancher. In real production deployments, we recommend having dedicated hosts running Rancher server(s).
 
 To add a host, access the UI and click **Infrastructure**, which will immediately bring you to the **Hosts** page. Click on the **Add Host**. If access control is not configured, Rancher will prompt you to select an IP address. This IP address must be reachable from all the hosts that you will be adding. This is useful in installations where Rancher server will be exposed to the Internet through a NAT firewall or a load balancer. If your host has a private or local IP address like `192.168.*.*`, Rancher will print a warning asking you to make sure hosts can indeed reach the IP.
 
@@ -105,7 +107,7 @@ For now you can ignore these warnings as we will only add the Rancher server hos
 $ sudo docker run -d --privileged -v /var/run/docker.sock:/var/run/docker.sock rancher/agent:v0.7.9 http://172.17.0.3:8080/v1/scripts/DB121CFBA836F9493653:1434085200000:2ZOwUMd6fIzz44efikGhBP1veo
 ```
 
-Since we are adding a host that is running Rancher server, we need to edit the command and insert `-e CATTLE_AGENT_IP=<server_ip>` into the command, where `<server_ip>` is the IP address of the Rancher server host. 
+Since we are adding a host that is running Rancher server, we need to edit the command and insert `-e CATTLE_AGENT_IP=<server_ip>` into the command, where `<server_ip>` is the IP address of the Rancher server host.
 
 In our example, `<server_ip>` is `172.17.0.3`, we will update the command to add in setting the environment variable.
 
@@ -113,7 +115,7 @@ In our example, `<server_ip>` is `172.17.0.3`, we will update the command to add
 $ sudo docker run -e CATTLE_AGENT_IP=172.17.0.3 -d --privileged -v /var/run/docker.sock:/var/run/docker.sock rancher/agent:v0.7.9 http://172.17.0.3:8080/v1/scripts/DB121CFBA836F9493653:1434085200000:2ZOwUMd6fIzz44efikGhBP1veo
 ```
 
-Run this command in a shell terminal of the host that is running Rancher server. 
+Run this command in a shell terminal of the host that is running Rancher server.
 
 When you click **Close** on the Rancher UI, you will be directed back to the **Infrastructure** -> **Hosts** view. In a little bit, the host will automatically appear.
 
@@ -137,9 +139,9 @@ In the UI, you will see **_second_container_** pop up on your host! If you termi
 
 Rancher reacts to events that happen out of the band and just does the right thing to reconcile its view of the world with reality. You can read more about using Rancher with the [native docker CLI]({{site.baseurl}}/rancher/native-docker/).
 
-If you look at the IP address of the **_second_container_**, you will notice that it is not in `10.42.*.*` range. It instead has the usual IP address assigned by the Docker daemon. This is the expected behavior of creating a Docker container through the CLI. 
+If you look at the IP address of the **_second_container_**, you will notice that it is not in `10.42.*.*` range. It instead has the usual IP address assigned by the Docker daemon. This is the expected behavior of creating a Docker container through the CLI.
 
-What if we want to create a Docker container through CLI and still give it an IP address from Rancher’s overlay network? All we need to do is add a label in the command. 
+What if we want to create a Docker container through CLI and still give it an IP address from Rancher’s overlay network? All we need to do is add a label in the command.
 
 ```bash
 $ docker run -it --label io.rancher.container.network=true ubuntu:14.04.2
@@ -161,7 +163,7 @@ The load balancer links to the WordPress service, and the WordPress service link
 
 In this section, we will walk through how to create and deploy the WordPress application in Rancher.
 
-From the Rancher UI, click the **Applications** tab, and click on the **Get Started** button to add your first service. 
+From the Rancher UI, click the **Applications** tab, and click on the **Get Started** button to add your first service.
 
 You will immediately be able to add a service. First, we'll create a database service called _database_ and use the mysql image. In the **Advanced Options**, add the environment variable `MYSQL_ROOT_PASSWORD=pass1`. Click **Create**. You will be immediately brought to a stack page, which will contain all the services. After the service is created, click on **Start** in the service.
 
@@ -173,7 +175,7 @@ Our multi-service application is now complete! Find the IP of the host that the 
 
 ### Create a Multi-Container Application using Rancher Compose
 
-In this section, we will show you how to create and deploy the same WordPress application we created in the previous section using a command-line tool called `rancher-compose`. 
+In this section, we will show you how to create and deploy the same WordPress application we created in the previous section using a command-line tool called `rancher-compose`.
 
 The `rancher-compose` tool works just like the popular `docker-compose` tool. It takes in the same `docker-compose.yml` file and deploys the application on Rancher. You can specify additional attributes in a `rancher-compose.yml` file which extends and overwrites the `docker-compose.yml` file.
 
@@ -247,6 +249,3 @@ $ rancher-compose -p NewWordpress up
 ```
 
 In Rancher, a new stack will be created called **NewWordPress** with all of the services launched.
-
-
-
