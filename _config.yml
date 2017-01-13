@@ -2,8 +2,8 @@ name: Rancher Documentation
 description: Documentation for Rancher
 
 
-URL: http://galal-hussein.github.io
-baseurl: "http://galal-hussein.github.io"
+URL: https://galal-hussein.github.io
+baseurl: "https://galal-hussein.github.io"
 
 markdown: redcarpet
 
