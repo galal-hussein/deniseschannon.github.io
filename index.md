@@ -1,7 +1,8 @@
 ---
 title: Rancher Documentation
 layout: rancher-default
-
+redirect_to:
+  - /v1.0/rancher/en
 ---
 
 ## testing
