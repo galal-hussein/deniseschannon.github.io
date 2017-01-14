@@ -1,9 +1,6 @@
 ---
 title: Rancher Documentation
 layout: rancher-default
-redirect_from:
-  - /rancher/
-  - /
 ---
 
 ## Overview of Rancher
